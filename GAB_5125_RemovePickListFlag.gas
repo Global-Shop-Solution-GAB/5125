@@ -1,0 +1,561 @@
+Program.Sub.ScreenSU.Start
+gui.F_Main..create
+gui.F_Main..caption("Remove Pick List Flag")
+gui.F_Main..size(5340,9135)
+gui.F_Main..position(0,0)
+gui.F_Main..event(unload,subExit)
+gui.F_Main..alwaysontop(False)
+gui.F_Main..fontname("Arial")
+gui.F_Main..fontsize(8)
+gui.F_Main..forecolor(0)
+gui.F_Main..fontstyle(,,,,)
+gui.F_Main..BackColor(-2147483633)
+gui.F_Main..controlbox(True)
+gui.F_Main..maxbutton(False)
+gui.F_Main..minbutton(False)
+gui.F_Main..mousepointer(0)
+gui.F_Main..moveable(True)
+gui.F_Main..sizeable(False)
+gui.F_Main..ShowInTaskBar(True)
+gui.F_Main..titlebar(True)
+gui.F_Main.fgOrders.create(gsflexgrid)
+gui.F_Main.fgOrders.FixedRows(0)
+gui.F_Main.fgOrders.FixedCols(0)
+gui.F_Main.fgOrders.visible(True)
+gui.F_Main.fgOrders.size(5105,5985)
+gui.F_Main.fgOrders.zorder(0)
+gui.F_Main.fgOrders.position(45,90)
+gui.F_Main.fgOrders.enabled(True)
+gui.F_Main.prgLoad.create(progressbar)
+gui.F_Main.prgLoad.visible(True)
+gui.F_Main.prgLoad.size(4830,480)
+gui.F_Main.prgLoad.zorder(0)
+gui.F_Main.prgLoad.position(200,3700)
+gui.F_Main.prgLoad.enabled(True)
+gui.F_Main.cmdExit.create(button)
+gui.F_Main.cmdExit.caption("Exit")
+gui.F_Main.cmdExit.visible(True)
+gui.F_Main.cmdExit.size(1040,375)
+gui.F_Main.cmdExit.zorder(0)
+gui.F_Main.cmdExit.position(4100,8290)
+gui.F_Main.cmdExit.enabled(True)
+gui.F_Main.cmdExit.fontname("Arial")
+gui.F_Main.cmdExit.fontsize(8)
+gui.F_Main.cmdExit.event(click,subExit)
+gui.F_Main.cmdClearAll.create(button)
+gui.F_Main.cmdClearAll.caption("Clear All")
+gui.F_Main.cmdClearAll.visible(True)
+gui.F_Main.cmdClearAll.size(2475,375)
+gui.F_Main.cmdClearAll.zorder(0)
+gui.F_Main.cmdClearAll.position(2675,7800)
+gui.F_Main.cmdClearAll.enabled(True)
+gui.F_Main.cmdClearAll.fontname("Arial")
+gui.F_Main.cmdClearAll.fontsize(8)
+gui.F_Main.cmdClearAll.event(click,E_cmdClearAll_Click)
+gui.F_Main.cmdCheckAll.create(button)
+gui.F_Main.cmdCheckAll.caption("Check All")
+gui.F_Main.cmdCheckAll.visible(True)
+gui.F_Main.cmdCheckAll.size(2505,375)
+gui.F_Main.cmdCheckAll.zorder(0)
+gui.F_Main.cmdCheckAll.position(80,7800)
+gui.F_Main.cmdCheckAll.enabled(True)
+gui.F_Main.cmdCheckAll.fontname("Arial")
+gui.F_Main.cmdCheckAll.fontsize(8)
+gui.F_Main.cmdCheckAll.event(click,E_cmdCheckAll_Click)
+gui.F_Main.cmdUpdate.create(button)
+gui.F_Main.cmdUpdate.caption("Process Selected")
+gui.F_Main.cmdUpdate.visible(True)
+gui.F_Main.cmdUpdate.size(3950,375)
+gui.F_Main.cmdUpdate.zorder(0)
+gui.F_Main.cmdUpdate.position(75,8300)
+gui.F_Main.cmdUpdate.enabled(True)
+gui.F_Main.cmdUpdate.fontname("Arial")
+gui.F_Main.cmdUpdate.fontsize(8)
+gui.F_Main.cmdUpdate.event(click,E_cmdUpdate_Click)
+gui.F_Main.lblNotes.create(label,"Notes",True,5025,1485,0,70,6185,True,0,Arial,8,-2147483633,0)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.Global.sSqlPopulate.Declare(String)
+Variable.Global.iRowCount.Declare(Long,0)
+Variable.Global.fProgBarValue.Declare(Float,0)
+Variable.Global.sVersion.Declare(String)
+Variable.Global.sFormHeader.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Coded by: Ben Krupp
+'Project Start Date: 2/28/2011
+'Customer: Mike Melzer (No Customer)
+'Project Name: Remove Pick List Flag
+'Notes:
+'     Program used to Quickly remove the "Pick List Printed" flag from Active Orders in the system.  You can manually check each item you wish to process
+'     or use the Check All (or Clear All) buttons to make mass selections.  This was designed for those who use the ORD055/E program/switch to print
+'     out all Pick Lists at once.  In the event of a printer failure, this program can be used to quickly undo the "Pick List Printed" flag.
+'Hooks:
+'     None Required
+'Tables:
+'     None Required
+
+
+'Set Program Version
+V.Global.sVersion.Set("100")
+
+'Launch "One Time" Subs
+F.Intrinsic.Control.CallSub("subBuildStyles_fgOrders")
+F.Intrinsic.Control.CallSub("subGenerate_Sql")
+
+'Update Form Header
+F.Intrinsic.String.Concat(V.Screen.F_Main.Caption," - Version: ",V.Global.sVersion,V.Global.sFormHeader)
+Gui.F_Main..Caption(V.Global.sFormHeader)
+
+'Update Button Color
+Gui.F_Main.cmdUpdate.FontName("Arial Black")
+Gui.F_Main.cmdUpdate.BackColor(V.Color.LtGreen)
+
+'Populate the instructions...
+Gui.F_Main.lblNotes.ForeColor(V.Color.Red)
+Gui.F_Main.lblNotes.Caption("The list above is ONLY showing you the order lines where the 'Pick List' has already been printed. The purpose of this program is to quickly remove the flag indicating that the 'Pick List' has been printed for many orders all at once. The items that you check will have the 'Pick List Printed Flag' reset to No when you click on the 'Process Button' below. Either manually check which orders you want to process or use the 'Check All' and 'Clear All' buttons below.")
+
+'Setup Tab Options
+Gui.F_Main.cmdCheckAll.TabIndex(10)
+Gui.F_Main.cmdClearAll.TabIndex(20)
+Gui.F_Main.cmdUpdate.TabIndex(30)
+Gui.F_Main.cmdExit.TabIndex(40)
+
+'Call the Load Screen Sub
+F.Intrinsic.Control.CallSub("subLoad_Screen")
+
+Program.Sub.Main.End
+
+Program.Sub.subBuildStyles_fgOrders.Start
+'Define Build Styles for Flex Grid fgOrders
+
+'Define Number of Columns and Fixed Columns in Flex Grid
+'Fixed Column for Row Number
+Gui.F_Main.fgOrders.Cols(6)
+Gui.F_Main.fgOrders.FixedCols(1)
+
+'Temp Set Row Count to 2 (So that Column Header can be Defined)
+'If No Data is Found Latter... Rows will Remain at 1 for the Fixed Header
+Gui.F_Main.fgOrders.Rows(2)
+Gui.F_Main.fgOrders.FixedRows(1)
+
+'--------------------------CREATE BUILD STYLES FOR FLEX GRID (USED FOR EITHER PART OF THE IF STATEMENT)----------------------------
+
+'Row Numbers
+Gui.F_Main.fgOrders.TextMatrix(0,0,"")
+Gui.F_Main.fgOrders.ColWidth(0,500)
+Gui.F_Main.fgOrders.BuildStyle(1,0,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,0,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,0,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,0,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(2,0,"Format","alignment",4)
+
+'Order Number
+Gui.F_Main.fgOrders.TextMatrix(1,0,"Order")
+Gui.F_Main.fgOrders.ColWidth(1,800)
+Gui.F_Main.fgOrders.BuildStyle(1,1,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,1,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,1,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,1,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(2,1,"Format","alignment",4)
+
+'Order Line
+Gui.F_Main.fgOrders.TextMatrix(2,0,"Ln")
+Gui.F_Main.fgOrders.ColWidth(2,400)
+Gui.F_Main.fgOrders.BuildStyle(1,2,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,2,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,2,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,2,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(2,2,"Format","alignment",4)
+
+'Part
+Gui.F_Main.fgOrders.TextMatrix(3,0,"Part")
+Gui.F_Main.fgOrders.ColWidth(3,1300)
+Gui.F_Main.fgOrders.BuildStyle(1,3,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,3,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,3,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,3,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(2,3,"Format","alignment",1)
+
+'Order Line Promise Date
+Gui.F_Main.fgOrders.TextMatrix(4,0,"Date Due")
+Gui.F_Main.fgOrders.ColWidth(4,1000)
+Gui.F_Main.fgOrders.BuildStyle(1,4,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,4,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,4,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,4,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(2,4,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,4,"Format","Mask","yyyy/mm/dd")
+
+'Remove Pick List Flag
+Gui.F_Main.fgOrders.TextMatrix(5,0,"")
+Gui.F_Main.fgOrders.ColWidth(5,400)
+Gui.F_Main.fgOrders.BuildStyle(1,5,"type","locked",True)
+Gui.F_Main.fgOrders.BuildStyle(1,5,"fontstyle","bold",True)
+Gui.F_Main.fgOrders.BuildStyle(1,5,"Format","alignment",4)
+'Gui.F_Main.fgOrders.BuildStyle(1,5,"Color","Back",V.Color.Pink)
+Gui.F_Main.fgOrders.BuildStyle(2,5,"type","checkbox",True)
+Gui.F_Main.fgOrders.BuildStyle(2,5,"Format","alignment",4)
+Gui.F_Main.fgOrders.BuildStyle(2,5,"Color","Back",V.Color.Pink)
+
+
+'Cell selection moves Down after hitting enter...
+Gui.F_Main.fgOrders.SetProperty("Enter",0)
+
+
+Program.Sub.subBuildStyles_fgOrders.End
+
+Program.Sub.subGenerate_Sql.Start
+
+'Define SQL Statements for Pulling Data from Global Shop
+
+'SELECT
+V.Global.sSqlPopulate.Set("SELECT '00000' AS BLANK, ORDER_NO, LEFT(RECORD_NO,3) AS RECORD_NO, PART, ITEM_PROMISE_DT ")
+
+'FROM/JOIN
+F.Intrinsic.String.Concat(V.Global.sSqlPopulate," FROM V_ORDER_LINES ",V.Global.sSqlPopulate)
+
+'WHERE (based on Drop Down List)
+F.Intrinsic.String.Concat(V.Global.sSqlPopulate,"WHERE PICK_LIST_PRINTED = 'Y' ",V.Global.sSqlPopulate)
+
+'GROUP/ORDER BY
+F.Intrinsic.String.Concat(V.Global.sSqlPopulate,"ORDER BY ORDER_NO, RECORD_NO ASC;",V.Global.sSqlPopulate)
+
+Program.Sub.subGenerate_Sql.End
+
+Program.Sub.subUpdate_fgOrders.Start
+'Sub for Saving changes made in the Grid back to the Database
+
+'Set Error Handler
+F.Intrinsic.Control.SetErrorHandler("ErrorStop")
+F.Intrinsic.Control.ClearErrors
+
+'Commit the Changes to the Flex Grid
+Gui.F_Main.fgOrders.Commit
+
+'Lock the GUI
+Gui.F_Main..Enabled(False)
+Gui.F_Main.fgOrders.Visible(false)
+Gui.F_Main.prgLoad.Value(0)
+Gui.F_Main.prgLoad.Visible(True)
+
+'Prep the Screen
+Gui.F_Main.fgOrders.Visible(False)
+Gui.F_Main.prgLoad.Visible(True)
+
+'Declare/Set Local Variables
+V.Local.sSqlUpdate.Declare(String)
+V.Local.iRow.Declare(Long)
+V.Local.iRow.Set(0)
+V.Local.sCheck.Declare(String)
+V.Local.sCheck.Set("")
+V.Local.sOrderNo.Declare(String)
+V.Local.sOrderNo.Set("")
+V.Local.sOrderLn.Declare(String)
+V.Local.sOrderLn.Set("")
+
+'F.Intrinsic.UI.Msgbox(V.Global.iRowCount,"Global Row Count")
+
+'Create/Open Connection
+F.ODBC.Connection!Conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+'Loop through all the records in the grid... if it is checked... un flag it in the database...
+F.Intrinsic.Control.For(V.Local.iRow,1,V.global.iRowCount,1)
+
+	'Get Check Status from Current Row	
+	Gui.F_Main.fgOrders.GetTextMatrix(5,V.Local.iRow,V.Local.sCheck)
+
+	'F.Intrinsic.UI.Msgbox(V.Local.sCheck)
+	
+	F.Intrinsic.Control.If(V.Local.sCheck,=,"1")
+		'Item Checked... Remove Flag from Global Shop
+		
+		'Pull data that is to be updated from the Grid
+		Gui.F_Main.fgOrders.GetTextMatrix(1,V.Local.iRow,V.Local.sOrderNo)
+		Gui.F_Main.fgOrders.GetTextMatrix(2,V.Local.iRow,V.Local.sOrderLn)
+
+		'Generate Update SQL Statement
+		'Manually add Last Zero for OrderLn (Record_NO)... It was removed during the Grid Load for Easier View
+		V.Local.sSqlUpdate.Set("UPDATE ORDER_LINES SET Pick_List_Printed = '' ")
+		F.Intrinsic.String.Concat(V.Local.sSqlUpdate,"WHERE RECORD_TYPE = 'L' AND ORDER_NO = '",V.Local.sSqlUpdate)
+		F.Intrinsic.String.concat(V.Local.sSqlUpdate,V.Local.sOrderNo,"' AND RECORD_NO = '",V.Local.sSqlUpdate)
+		F.Intrinsic.String.concat(V.Local.sSqlUpdate,V.Local.sOrderLn,"0';",V.Local.sSqlUpdate)
+
+		'F.Intrinsic.UI.Msgbox(V.Local.sSqlUpdate)
+
+		'Execute Update Statement
+		F.ODBC.connection!Conx.Execute(V.Local.sSqlUpdate)
+		
+	F.Intrinsic.Control.EndIf
+
+	'Update/Display Progress Bar
+	F.Intrinsic.Math.Div(V.Local.iRow,V.Global.iRowCount,V.Global.fProgBarValue)
+	F.Intrinsic.Math.Mult(V.Global.fProgBarValue,100,V.Global.fProgBarValue)
+	
+	'F.Intrinsic.UI.Msgbox(V.Global.fProgBarValue)
+	
+	Gui.F_Main.prgLoad.Value(V.Global.fProgBarValue)
+
+
+F.Intrinsic.Control.Next(V.Local.iRow)
+
+'Close Connection
+F.ODBC.Connection!Conx.close
+
+'If No Errors
+'Program Complete
+F.Intrinsic.UI.Msgbox("Orders Updated Successfully","Success")
+
+
+F.Intrinsic.Control.ExitSub
+
+
+'______________________________________________________________________
+'**E*R*R*O*R******H*A*N*D*L*E*R** (START)
+F.Intrinsic.Control.Label("ErrorStop")
+
+'Declare Local Variable	
+V.Local.sError.Declare(String)
+
+'Create Error String
+F.Intrinsic.String.Concat("Error Occured: ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+
+'+++++++++++++++++++++++++++
+F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+	'Connection Open, Close It
+	F.ODBC.Connection!conx.Close
+F.intrinsic.control.EndIf
+'++++++++++++++++++++++++++
+
+'Display Error
+F.Intrinsic.UI.Msgbox(V.Local.sError,"ERROR:  Change NOT Saved")
+
+F.Intrinsic.Control.ClearErrors
+
+'End the Script/Program
+F.Intrinsic.Control.End
+'______________________________________________________________________
+''**E*R*R*O*R******H*A*N*D*L*E*R** (END)
+
+
+Program.Sub.subUpdate_fgOrders.End
+
+Program.Sub.subLoad_fgOrders.Start
+'Load Data into Flex Grid fg_Sales
+
+'Set Error Handler
+F.Intrinsic.Control.SetErrorHandler("ErrorStop")
+F.Intrinsic.Control.ClearErrors
+
+'Declare Local Variables
+V.Global.iRowCount.Set(0)
+V.Local.fBoExt.Declare(Float,0)
+V.Local.fBoExtTotal.Declare(Float,0)
+V.Local.fOrdExtTotal.Declare(Float,0)
+
+'Create/Open Connection
+F.ODBC.Connection!Conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+'Create/Populate RO Recordsets
+F.ODBC.Connection!Conx.OpenRecordsetRO("rstOrders",V.Global.sSqlPopulate)
+
+'Apply Style for Fixed Row 0
+Gui.F_Main.fgOrders.ApplyStyle(0,1)
+
+'Loop through the rstSales recordset and count the rows
+F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstOrders.EOF,=,True)
+	'Add up the Rows
+	F.Intrinsic.Math.Add(V.Global.iRowCount,1,V.Global.iRowCount)
+	
+	F.ODBC.conx!rstOrders.MoveNext
+
+F.Intrinsic.Control.Loop
+
+'Goes back to the First record of rstSales... The loop had put us at EOF
+F.ODBC.Conx!rstOrders.Requery
+
+F.Intrinsic.Control.If(V.Global.iRowCount,>,0)
+	'Records have been Found
+
+	'Populate Flex Grid with Data and Apply Style 2
+	Gui.F_Main.fgOrders.LoadRecordset("Conx!rstOrders",2,False)
+	
+	'Add one Row to account for Fixed Row
+	F.Intrinsic.Math.Add(V.Global.iRowCount,1,V.Global.iRowCount)
+		Gui.F_Main.fgOrders.Rows(V.Global.iRowCount)
+	F.Intrinsic.Math.Sub(V.Global.iRowCount,1,V.Global.iRowCount)
+
+	'F.Intrinsic.Control.CallSub("subGenerate_RowNumbersAndHeight")
+
+F.Intrinsic.Control.Else
+	'No Records Found
+	F.intrinsic.Debug.Print("TEST")
+	Gui.F_Main.fgOrders.Rows(1)
+F.Intrinsic.Control.EndIf
+
+'Close the Record Set
+F.ODBC.conx!rstOrders.Close
+
+'Close the Connection
+F.ODBC.Connection!Conx.Close
+
+'Apply Mask  to Txt Boxes after Value has been inputed (defined during start in MAIN)
+Gui.F_Main..ApplyMasks
+
+F.Intrinsic.Control.Exitsub
+
+
+
+'______________________________________________________________________
+'**E*R*R*O*R******H*A*N*D*L*E*R** (START)
+F.Intrinsic.Control.Label("ErrorStop")
+
+'Declare Local Variable	
+V.Local.sError.Declare(String)
+
+'Create Error String
+F.Intrinsic.String.Concat("Error Occured: ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+
+'+++++++++++++++++++++++++++
+F.intrinsic.control.if(V.ODBC.conx!rstOrders.State,=,1)
+	'Record Set Open, Close It
+	F.ODBC.conx!rstOrders.Close
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+	'Connection Open, Close It
+	F.ODBC.Connection!conx.Close
+F.intrinsic.control.EndIf
+'++++++++++++++++++++++++++
+
+'Display Error
+F.Intrinsic.UI.Msgbox(V.Local.sError,"ERROR:  Could Not Load Flex Grid")
+
+F.Intrinsic.Control.ClearErrors
+
+'End the Script/Program
+F.Intrinsic.Control.End
+'______________________________________________________________________
+''**E*R*R*O*R******H*A*N*D*L*E*R** (END)
+
+
+Program.Sub.subLoad_fgOrders.End
+
+Program.Sub.subExit.Start
+
+'The Exit Sub
+
+'Try to Save Settings Before Exit
+F.Intrinsic.Control.CallSub("subSettings_Save")
+
+F.Intrinsic.Control.End
+
+
+Program.Sub.subExit.End
+
+Program.Sub.subSettings_Save.Start
+
+
+Program.Sub.subSettings_Save.End
+
+Program.Sub.subGenerate_RowNumbers.Start
+'Sub used to Generate Sequential Row Numbers for the Grid
+
+'Declare Local Variable
+V.Local.iCount.Declare(Long,0)
+
+'Number the Rows on fgSales (static numbers per load)
+F.Intrinsic.Control.for(V.Local.iCount,1,V.Global.iRowCount,1)
+	Gui.F_Main.fgOrders.TextMatrix(0,V.Local.iCount,V.Local.iCount)
+F.Intrinsic.Control.Next(V.Local.iCount)
+
+Program.Sub.subGenerate_RowNumbers.End
+
+Program.Sub.E_cmdUpdate_Click.Start
+'Process Button Clicked
+
+F.Intrinsic.control.CallSub("subUpdate_fgOrders")
+F.Intrinsic.Control.CallSub("subLoad_Screen")
+
+Program.Sub.E_cmdUpdate_Click.End
+
+Program.Sub.E_cmdCheckAll_Click.Start
+'Check All button Checked
+
+F.Intrinsic.Control.CallSub("subCheck_AllNone","sPassCheckValue","1")
+
+Program.Sub.E_cmdCheckAll_Click.End
+
+Program.Sub.E_cmdClearAll_Click.Start
+'Clear All Button Clicked
+
+F.Intrinsic.Control.CallSub("subCheck_AllNone","sPassCheckValue","0")
+
+Program.Sub.E_cmdClearAll_Click.End
+
+Program.Sub.subLoad_Screen.Start
+'Sub used to Set up the Form
+
+'Hide/Reset the Progress Bar
+Gui.F_Main.prgLoad.Visible(False)
+Gui.F_Main.prgLoad.Value(0)
+V.Global.fProgBarValue.Set(0)
+
+'Load the Flex Grid
+F.Intrinsic.Control.CallSub("subLoad_fgOrders")
+F.Intrinsic.Control.CallSub("subGenerate_RowNumbers")
+
+'Check if there are any rows before updating
+F.Intrinsic.control.If(V.Global.iRowCount,<,1)
+	'No Rows... Nothing To Update
+	F.Intrinsic.UI.Msgbox("No active Order Lines have been found with the Pick List Flag marked... Program will now close.","Nothing to Show")
+	F.Intrinsic.control.End
+F.Intrinsic.control.EndIf
+
+'Show the Screen
+Gui.F_Main.fgOrders.Visible(True)
+Gui.F_Main..Visible(True)
+Gui.F_Main..Enabled(True)
+
+Program.Sub.subLoad_Screen.End
+
+Program.Sub.subCheck_AllNone.Start
+'Sub used to Check Or Uncheck All Items
+
+'Temp Disable GUI
+Gui.F_Main..Enabled(False)
+Gui.F_Main.prgLoad.Visible(True)
+
+'Create Local Variables
+V.Local.iRow.Declare(Long)
+V.Local.iRow.Set(0)
+V.Local.sCheckValue.Declare(String)
+V.Local.sCheckValue.Set("")
+
+'Load Passed Variable
+V.Local.sCheckValue.Set(V.Args.sPassCheckValue)
+
+'Loop through ALL Records and Check them...
+F.Intrinsic.Control.For(V.Local.iRow,1,V.Global.iRowCount,1)
+	Gui.F_Main.fgOrders.TextMatrix(5,V.Local.iRow,V.Local.sCheckValue)
+
+	'Update Progress Bar
+	F.Intrinsic.Math.Div(V.Local.iRow,V.Global.iRowCount,V.Global.fProgBarValue)
+	F.Intrinsic.Math.Mult(V.Global.fProgBarValue,100,V.Global.fProgBarValue)
+	Gui.F_Main.prgLoad.Value(V.Global.fProgBarValue)
+
+F.Intrinsic.Control.Next(V.Local.iRow)
+
+'Restore GUI
+Gui.F_Main..Enabled(True)
+Gui.F_Main.prgLoad.Visible(False)
+
+
+Program.Sub.subCheck_AllNone.End
+
+
